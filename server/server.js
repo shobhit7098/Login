@@ -25,8 +25,6 @@ app.use(
   })
 );
 
-]
-
 // ✅ Body Parser
 app.use(express.json());
 
