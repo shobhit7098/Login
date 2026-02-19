@@ -18,7 +18,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: "https://login-3-i4wo.onrender.com/",
+    origin: "https://login-3-i4wo.onrender.com",
     credentials: true,
   })
 );
