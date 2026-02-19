@@ -18,7 +18,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://login-3-i4wo.onrender.com/",
     credentials: true,
   })
 );
