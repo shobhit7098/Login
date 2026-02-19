@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState , useEffect } from "react";
 import { AppContext } from "../context/AppContext";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -24,39 +24,64 @@ const Login = () => {
     role: "client",
   });
 
-  /* ================= SEND OTP (Signup) ================= */
+  /* ================= PREMIUM TOAST ================= */
+  const showToast = (type, message) => {
+    toast[type](message, {
+      position: "top-right",
+      autoClose: 3000,
+      theme: "colored",
+      style: {
+        borderRadius: "12px",
+        fontWeight: "500",
+      },
+    });
+  };
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  /* ================= SEND OTP ================= */
   const sendOtpHandler = async () => {
-    if (!form.email) return toast.error("Enter email first!");
-console.log(form.email);
+    if (!form.email) return showToast("error", "Enter email first!");
+
+    if (!emailRegex.test(form.email)) {
+      return showToast("error", "Please enter valid email address");
+    }
 
     setLoading(true);
-
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/auth/send-otp`,
         { email: form.email }
       );
-    console.log("Backend Response:", data);
+
       if (data.success) {
-        toast.success("OTP Sent Successfully");
+        showToast("success", "OTP sent to your email 📩");
         setOtpSent(true);
-        setOtpVerified(false);
       } else {
-        toast.error(data.message);
+        showToast("error", data.message);
       }
     } catch {
-      toast.error("Failed to send OTP");
+      showToast("error", "Failed to send OTP");
     } finally {
       setLoading(false);
     }
   };
+    useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
 
-  /* ================= VERIFY OTP (Signup) ================= */
+  if (token) {
+    localStorage.setItem("token", token);
+    setToken(token);
+    navigate("/home"); // redirect to home
+  }
+}, []);
+
+  /* ================= VERIFY SIGNUP OTP ================= */
   const verifyOtpHandler = async () => {
-    if (!otp) return toast.error("Enter OTP!");
+    if (!otp) return showToast("error", "Enter OTP!");
 
     setLoading(true);
-
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/auth/verify-otp`,
@@ -64,15 +89,15 @@ console.log(form.email);
       );
 
       if (data.success) {
-        toast.success("OTP Verified Successfully");
+        showToast("success", "OTP verified successfully ✅");
         setOtpVerified(true);
         setOtpSent(false);
         setOtp("");
       } else {
-        toast.error(data.message);
+        showToast("error", data.message);
       }
     } catch {
-      toast.error("OTP Verification Failed");
+      showToast("error", "OTP Verification Failed");
     } finally {
       setLoading(false);
     }
@@ -80,48 +105,50 @@ console.log(form.email);
 
   /* ================= VERIFY LOGIN OTP ================= */
   const verifyLoginOtpHandler = async () => {
-    if (!otp) return toast.error("Enter OTP!");
+    if (!otp) return showToast("error", "Enter OTP!");
 
     setLoading(true);
-
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/auth/verify-login-otp`,
         { email: form.email, otp }
       );
-       console.log("Backend Response:", data);
+
       if (!data.success) {
-        setLoading(false);
-        return toast.error(data.message);
+        return showToast("error", data.message);
       }
 
       localStorage.setItem("token", data.token);
       setToken(data.token);
 
-      setOtpSent(false);
-      setOtp("");
-      setLoading(false);
-
-      toast.success("Login Successful!");
+      showToast("success", "Welcome back! Login successful 🚀");
       navigate("/home");
-
     } catch {
+      showToast("error", "OTP Verification Failed");
+    } finally {
       setLoading(false);
-      toast.error("OTP Verification Failed");
     }
   };
 
   /* ================= SUBMIT ================= */
   const submitHandler = async (e) => {
     e.preventDefault();
+
+    if (!emailRegex.test(form.email)) {
+      return showToast("error", "Please enter valid email address");
+    }
+
+    if (form.password.length < 8) {
+      return showToast("error", "Password must be at least 8 characters");
+    }
+
     setLoading(true);
 
     try {
       /* ===== SIGNUP ===== */
       if (mode === "signup") {
         if (!otpVerified) {
-          setLoading(false);
-          return toast.error("Please verify OTP first!");
+          return showToast("error", "Please verify OTP first!");
         }
 
         const { data } = await axios.post(
@@ -130,14 +157,13 @@ console.log(form.email);
         );
 
         if (!data.success) {
-          setLoading(false);
-          return toast.error(data.message);
+          return showToast("error", data.message);
         }
 
         localStorage.setItem("token", data.token);
         setToken(data.token);
 
-        toast.success("Registration Successful!");
+        showToast("success", "Account created successfully 🎉");
         navigate("/home");
       }
 
@@ -151,31 +177,35 @@ console.log(form.email);
             role: form.role,
           }
         );
- console.log("Backend Response:", data);
+
         if (!data.success) {
-          setLoading(false);
-          return toast.error(data.message);
+          if (data.message === "User not found") {
+            return showToast("error", "User does not exist ❌");
+          }
+
+          if (data.message === "Invalid credentials") {
+            return showToast("error", "Incorrect email or password ❌");
+          }
+
+          return showToast("error", data.message);
         }
 
-        // OTP Step
         if (data.step === "OTP_SENT") {
-          toast.success("Login OTP sent to email");
+          showToast("success", "Login OTP sent to email 📩");
           setOtpSent(true);
-          setOtp("");
-          setLoading(false);
           return;
         }
 
-        // Direct login (optional)
         if (data.token) {
           localStorage.setItem("token", data.token);
           setToken(data.token);
+          showToast("success", "Login successful 🚀");
           navigate("/home");
         }
       }
 
     } catch {
-      toast.error("Authentication Failed");
+      showToast("error", "Authentication Failed");
     } finally {
       setLoading(false);
     }
@@ -202,7 +232,6 @@ console.log(form.email);
           {mode === "signup" ? "Create Account" : "Login"}
         </h2>
 
-        {/* NAME */}
         <AnimatePresence>
           {mode === "signup" && (
             <div className="relative mb-3">
@@ -220,7 +249,6 @@ console.log(form.email);
           )}
         </AnimatePresence>
 
-        {/* EMAIL */}
         <div className="relative mb-3">
           <FiMail className="absolute top-2.5 left-3 text-white/70 text-sm" />
           {otpVerified && mode === "signup" && (
@@ -238,7 +266,6 @@ console.log(form.email);
           />
         </div>
 
-        {/* LOGIN OTP UI */}
         {mode === "login" && otpSent && (
           <div className="mb-3">
             <input
@@ -258,7 +285,6 @@ console.log(form.email);
           </div>
         )}
 
-        {/* SIGNUP OTP UI */}
         {mode === "signup" && !otpVerified && (
           <>
             {!otpSent && (
@@ -292,7 +318,6 @@ console.log(form.email);
           </>
         )}
 
-        {/* PASSWORD */}
         <div className="relative mb-4">
           <FiLock className="absolute top-2.5 left-3 text-white/70 text-sm" />
           <input

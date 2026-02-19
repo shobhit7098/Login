@@ -1,29 +1,44 @@
-import express from 'express'
-import cors from 'cors'
-import 'dotenv/config'
-import connectDB from './config/mongodb.js'
+import express from "express";
+import cors from "cors";
+import "dotenv/config";
+import session from "express-session";
 import passport from "passport";
+// import { setupGoogleAuth } from "./middlewares/";
+import connectDB from "./config/mongodb.js";
 import { setupGoogleAuth } from "./middlewares/authGoogle.js";
 import authRoutes from "./routes/authRoute.js";
 
+const app = express();
+const port = process.env.PORT || 5000;
 
-
-// app config
-const app = express()
-const port = process.env.PORT || 4000
-connectDB()
-// connectCloudinary()
+connectDB();
 setupGoogleAuth();
-// middlewares
-app.use(express.json())
-app.use(cors())
+
+app.use(express.json());
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+
+app.use(
+  session({
+    secret: "keyboardcat",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
 app.use(passport.initialize());
+app.use(passport.session());
+setupGoogleAuth();
 
 app.use("/api/auth", authRoutes);
 
+app.get("/", (req, res) => {
+  res.send("API working...");
+});
 
-app.get('/', (req, res) => {
-  res.send('Api working...')
-})
-
-app.listen(port, () => console.log('Server started', port))
+app.listen(port, () => console.log("Server started on", port));

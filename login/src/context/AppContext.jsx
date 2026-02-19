@@ -6,7 +6,7 @@ export const AppContext = createContext();
 
 const AppContextProvider = (props) => {
   const backendUrl =
-    import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+    import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
   // Token state
   const [token, setToken] = useState(
